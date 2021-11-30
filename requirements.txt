@@ -1,0 +1,6 @@
+flask
+requests
+jsonpickle
+python-dotenv
+Flask-PyMongo
+schedule
