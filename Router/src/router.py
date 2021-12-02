@@ -1,6 +1,6 @@
 # make db connection - MongoDB
 # for the requested date, get the document data
-# for the requested city get the orderids and
+# for each city get the orderids and
 # for each of the order id, get the user data
 # get the outlet address for those cities
 # for each of those orders in the city get distances from the warehouse

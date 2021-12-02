@@ -2,5 +2,6 @@ flask
 requests
 jsonpickle
 python-dotenv
-Flask-PyMongo
+PyMongo
 schedule
+pika
