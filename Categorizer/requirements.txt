@@ -1,5 +1,5 @@
 requests
 jsonpickle
-Flask-PyMongo
+PyMongo
 pika
-Flask-SQLAlchemy
+mysql-connector-python
