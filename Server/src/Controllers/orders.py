@@ -1,5 +1,8 @@
-from flask import Blueprint
-from flask.wrappers import Response
+from os import stat
+from flask import Blueprint, Response, request
+import jsonpickle
+from Database.db import getAllOrders, createOrder
+from Server.src.Database.db import cancelOrder
 
 orders_api = Blueprint("orders_api", __name__)
 
@@ -8,14 +11,33 @@ orders_api = Blueprint("orders_api", __name__)
 @orders_api.route("/orders", methods='GET')
 def GetOrders():
 	# get orders data
-	return Response(response='ok', status=200)
+	try:
+		deliveryDate = request.args.get('deliveryDate')
+		orders = getAllOrders(deliveryDate)
+		return Response(response=jsonpickle.encode(orders), status=200)
+	except Exception as e:
+		print(e)
+		return Response(response=e, status=400)
 
 @orders_api.route("/orders", methods='POST')
 def CreateOrders():
 	# create orders
-	return Response(response='ok', status=200)
+	order = request.body
+	try:
+		createOrder(order)
+		return Response(response='ok', status=200)
+	except Exception as e:
+		print(e)
+		return Response(response=e, status=400)
 
 @orders_api.route("/orders", methods='PUT')
-def CreateOrders():
+def UpdateOrders():
 	# cancel orders
-	return Response(response='ok', status=200)
+	orderId = request.args.get('orderId')
+	try:
+		cancelOrder(orderId)
+		return Response(response='Order Cancelled', status=200)
+	except Exception as e:
+		return Response(response=e, status=400)
+		
+		

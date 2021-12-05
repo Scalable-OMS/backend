@@ -38,11 +38,15 @@ class Orders(db.Model):
 	id = db.Column(db.String(100), primary_key = True)
 	productId = db.Column(db.String(100))
 	userId = db.Column(db.String(100))
+	deliveryDate = db.Column(db.String(100))
+	status = db.Column(db.String(100))
 
-	def __init__(self, id, productId, userId):
+	def __init__(self, id, productId, userId, deliveryDate, status):
 		self.id = id
 		self.productId = productId
 		self.userId = userId
+		self.deliveryDate = deliveryDate
+		self.status = status
 
 class Products(db.Model):
 	id = db.Column(db.String(100), primary_key = True)
@@ -67,6 +71,29 @@ class Warehouses(db.Model):
 def mysql_db():
 	return db
 
+def getAllOrders(deliveryDate):
+	return Orders.query.filter_by(deliveryDate=deliveryDate).all()
+
+def getOrderDetails():
+	orderDetails = db.session.query(Orders, Users).join(Orders).join(Users).filter_by(Orders.userId == Users.id).all()
+	print(orderDetails)
+	return orderDetails
+
+def createOrder(order):
+	order_obj = Orders(productId=order["productId"], userId=order["userId"], deliveryDate=order["deliveryDate"])
+	db.session.add(order_obj)
+	db.session.commit()
+
+def cancelOrder(orderId):
+	order = db.session.query(Orders).filter_by(orderId=orderId).first()
+	order.status = "cancelled"
+	db.session.commit()
+
+def getAllWarehouses():
+	return Warehouses.query.all()
+
+def getProductById(id):
+	return Products.query.filter_by(id=id).all()
 ######### END - MYSQL ###########
 
 
