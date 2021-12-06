@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask.wrappers import Response, request
-from Server.Database.db import get_db
+from Database.db import get_db
 import jsonpickle
 
 routes_api = Blueprint("routes_api", __name__)

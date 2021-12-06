@@ -1,0 +1,18 @@
+{
+	"ordered": {
+		"subject": "Order Placed",
+		"body": "Your order has been successfully placed. Stay tuned for order updates"
+	},
+	"cancelled": {
+		"subject": "Order Cancelled",
+		"body": "Your order has been cancelled. We're sorry to see that you had to cancel your order, we hope you can find what you are looking for"
+	},
+	"outfordelivery": {
+		"subject": "Order is Out for Delivery",
+		"body": "Your order is out for delivery, please expect your order to be delivered today"
+	},
+	"delivered": {
+		"subject": "Order Delivered",
+		"body": "Your order has been successfully delivered. Please write a review on our application"
+	}
+}

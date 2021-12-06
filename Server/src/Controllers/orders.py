@@ -1,8 +1,6 @@
-from os import stat
 from flask import Blueprint, Response, request
 import jsonpickle
-from Database.db import getAllOrders, createOrder
-from Server.src.Database.db import cancelOrder
+from Database.db import getAllOrders, createOrder, cancelOrder
 
 orders_api = Blueprint("orders_api", __name__)
 
@@ -30,8 +28,8 @@ def CreateOrders():
 		print(e)
 		return Response(response=e, status=400)
 
-@orders_api.route("/orders", methods='PUT')
-def UpdateOrders():
+@orders_api.route("/orders/cancel", methods='PUT')
+def CancelOrders():
 	# cancel orders
 	orderId = request.args.get('orderId')
 	try:
