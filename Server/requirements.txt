@@ -1,0 +1,7 @@
+pyjwt
+requests
+jsonpickle
+flask_sqlalchemy
+PyMongo
+pika
+flask

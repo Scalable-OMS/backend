@@ -21,18 +21,18 @@ db = SQLAlchemy(app)
 class Users(db.Model):
 	id = db.Column(db.String(100), primary_key = True)
 	name = db.Column(db.String(100))
+	email = db.Column(db.String(100))
 	address = db.Column(db.String(400))
 	postalcode = db.Column(db.Integer)
 	city = db.Column(db.String(100))
-	role = db.Column(db.String(50))
 
-	def __init__(self, id, name, address, postalcode, city, role):
+	def __init__(self, id, name, address, postalcode, city, email):
 		self.id = id
 		self.name = name
 		self.address = address
 		self.postalcode = postalcode
 		self.city = city
-		self.role = role
+		self.email = email
 
 class Orders(db.Model):
 	id = db.Column(db.String(100), primary_key = True)
@@ -66,11 +66,19 @@ class Warehouses(db.Model):
 		self.address = address
 		self.city = city
 
+class Auth(db.Model):
+	id = db.Column(db.String(100), primary_key = True)
+	email = db.Column(db.String(100))
+	password = db.Coulmn(db.String(200))
+	token = db.Column(db.String(200))
+	role = db.Column(db.String(20))
+
 ######### END - Models ###########
 
 def mysql_db():
 	return db
 
+##### orders #####
 def getAllOrders(deliveryDate):
 	return Orders.query.filter_by(deliveryDate=deliveryDate).all()
 
@@ -89,11 +97,29 @@ def cancelOrder(orderId):
 	order.status = "cancelled"
 	db.session.commit()
 
+##### END - orders #####
+
 def getAllWarehouses():
 	return Warehouses.query.all()
 
 def getProductById(id):
 	return Products.query.filter_by(id=id).all()
+
+##### auth #####
+
+def verifyUser(creds):
+	user = db.session.query(Auth).filter_by(email=creds["email"]).first()
+	if user is not None:
+		return user
+	return None
+
+def updateToken(token, email):
+	user = db.session.query(Auth).filter_by(email=email).first()
+	user.token = token
+	db.session.commit()
+
+##### END - auth #####
+
 ######### END - MYSQL ###########
 
 

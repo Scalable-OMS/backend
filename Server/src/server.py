@@ -3,6 +3,7 @@ from flask import Flask, request, Response
 import jsonpickle
 import schedule
 from Controllers.orders import orders_api
+from Controllers.auth import auth_api
 import os
 import pika
 
@@ -10,6 +11,7 @@ import pika
 # Initialize the Flask application
 app = Flask(__name__)
 app.register_blueprint(orders_api)
+app.register_blueprint(auth_api)
 #######################
 
 #######################
