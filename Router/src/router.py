@@ -288,12 +288,12 @@ class Graph:
 
 ######### RabbitMQ connection ###########
 
-# rabbitMQ = pika.BlockingConnection(
-#     pika.ConnectionParameters(host=rabbitMQHost))
-# rabbitMQChannel = rabbitMQ.channel()
-# rabbitMQChannel.queue_declare(queue='toSortingWorker')
-# rabbitMQChannel.exchange_declare(exchange='logs', exchange_type='topic')
-# rabbitMQChannel.basic_consume(queue='toSortingWorker', on_message_callback=routeOrders, auto_ack=False)
-# rabbitMQChannel.start_consuming()
+rabbitMQ = pika.BlockingConnection(
+    pika.ConnectionParameters(host=rabbitMQHost))
+rabbitMQChannel = rabbitMQ.channel()
+rabbitMQChannel.queue_declare(queue='toSortingWorker')
+rabbitMQChannel.exchange_declare(exchange='logs', exchange_type='topic')
+rabbitMQChannel.basic_consume(queue='toSortingWorker', on_message_callback=routeOrders, auto_ack=False)
+rabbitMQChannel.start_consuming()
 
 ######### END - RabbitMQ connection ###########
