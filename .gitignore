@@ -3,3 +3,5 @@
 /Scripts/
 /Include/
 .env
+*.pyc
+.idea

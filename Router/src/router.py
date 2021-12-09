@@ -66,9 +66,6 @@ def getWarehouseLocations():
 
 ######### END - MYSQL ###########
 
-
-rabbitMQHost = os.getenv("RABBITMQ_HOST") or "rabbitmq"
-
 def getRequestUrls(cityOrders, warehouseLocations):
 	addressDelimiter = "|"
 	requestUris = []
@@ -152,7 +149,7 @@ def routeOrders(ch, method, properties, body):
 
 
 ######### RabbitMQ connection ###########
-
+rabbitMQHost = os.getenv("RABBITMQ_HOST") or "rabbitmq"
 rabbitMQ = pika.BlockingConnection(
 	pika.ConnectionParameters(host=rabbitMQHost))
 rabbitMQChannel = rabbitMQ.channel()

@@ -1,7 +1,8 @@
 pyjwt
 requests
 jsonpickle
-flask_sqlalchemy
+Flask-SQLAlchemy
 PyMongo
 pika
 flask
+apscheduler

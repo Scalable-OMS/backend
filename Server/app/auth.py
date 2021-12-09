@@ -2,7 +2,7 @@ from flask import Blueprint, Response, request
 import jsonpickle
 import jwt
 import os
-from Database.db import verifyUser, updateToken
+from .db import verifyUser, updateToken
 from datetime import datetime
 from datetime import timedelta
 
@@ -71,7 +71,7 @@ def validateToken(token):
 		print(e)
 		return None
 
-@auth_api.route("/auth/login")
+@auth_api.route("/auth/login", methods=['POST'])
 def login():
 	try:
 		res = {
@@ -92,7 +92,7 @@ def login():
 	except Exception as e:
 		return Response(response=jsonpickle.encode(e), status=400)
 
-@auth_api.route("/auth/logout")
+@auth_api.route("/auth/logout", methods=['PUT'])
 def logout():
 	try:
 		token = request.headers.get("token")
