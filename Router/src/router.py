@@ -7,34 +7,47 @@
 # create a distance matrix and use a naive travelling salesman problem and get the route
 # store the route in mongoDB document for that date
 from math import *
+from Router.src import config
 import pika
-import os
-
 import pymongo
 import mysql.connector
 import json
-import requests
 import sys
-from .config import config
+import config as c
 
 
 ######### MongoDB ###########
-user = config['mongo_user']
-password = os.getenv("mongodb_password")
-mongodb = os.getenv("mongodb")
-connection_url = f"mongodb+srv://{user}:{password}@mygamecluster.e4sni.mongodb.net/gameMeta?retryWrites=true&w=majority"
+user = c.config['mongo_user']
+password = c.config['mongo_password']
+mongodb = c.config['mongodb']
+host = c.config['mongo_host']
+connection_url = f"mongodb+srv://{user}:{password}@{host}/gameMeta?retryWrites=true&w=majority".\
+	format(user, password, host)
 client = pymongo.MongoClient(connection_url)
 db = client.oms
-routes = db[mongodb]
+routes = db['routes']
 ######### END - MongoDB ###########
 
 ######### MYSQL ###########
 mysqldb = mysql.connector.connect(
-	host="localhost",
-	user="root",
-	password="1234",
-	database="oms"
+	host=c.config['mysql_host'],
+	user=c.config['mysql_username'],
+	password=c.config['mysql_password'],
+	database=c.config['mysql_dbname']
 )
+
+def getOrdersByDateAndCity(deliveryDate, cities):
+	try:
+		sqlcursor =  mysqldb.cursor()
+		query = f"SELECT * FROM orders o, users u WHERE o.userId=u.id AND o.deliveryDate=\'{deliveryDate}\' AND u.city in ({cities})"
+		print(query)
+		sqlcursor.execute(query)
+		result = sqlcursor.fetchall()
+		return result
+	except Exception as e:
+		print(e)
+	finally:
+		sqlcursor.close()
 
 def getOrdersByDate(deliveryDate):
 	try:
@@ -114,10 +127,10 @@ def getDistanceBetweenOrders(cityOrders, warehouseLocations):
 		for order in orders:
 			order_address = getCoordinatesForAddress(order["customerId"])
 			city_addresses.append(order_address)
-			city_orders_indexing[city][index] = order["orderId"]
+			city_orders_indexing[city][index] = {"orderId": order["orderId"], "deliveryAddress": order['orderAddress']}
 			index += 1
+		city_distance_map[city] = getDistanceMatrix(city_addresses)
 
-	city_distance_map[city] = getDistanceMatrix(city_addresses)
 	return city_distance_map, city_orders_indexing
 
 
@@ -207,6 +220,12 @@ def findShortestPathFromWH(matrix):
 def routeOrders(ch, method, properties, body):
 	req_body = json.loads(body.decode('utf-8'))
 	deliveryDate = req_body['deliveryDate']
+	######## Testing variables ########
+	# deliveryDate = body['deliveryDate']
+	# cities = body['cities']
+	# orders = getOrdersByDateAndCity(deliveryDate, cities)
+	# print(len(orders))
+	###################################
 	orders = getOrdersByDate(deliveryDate)
 	warehouseLocations = getWarehouseLocations()
 	warehouseLocationsMap = {}
@@ -230,7 +249,7 @@ def routeOrders(ch, method, properties, body):
 			"orderAddress": order[10],
 			"customerId": order[2]
 		})
-
+	print(cityOrdersMap.keys())
 	cityDistanceMatrixMap, city_orders_indexing = getDistanceBetweenOrders(cityOrdersMap, warehouseLocationsMap)
 	city_delivery_routes = {}
 	for city in cityDistanceMatrixMap.keys():
@@ -238,22 +257,33 @@ def routeOrders(ch, method, properties, body):
 		result = findShortestPathFromWH(distanceMatrix)
 		city_delivery_routes[city] = {}
 		for path in result.keys():
-			city_delivery_routes[city][path] = []
+			city_delivery_routes[city][path] = { "orders": [], "driverId": "" }
 			for orderIndex in result[path]:
 				if orderIndex != -1:
 					if orderIndex == 0:
-						city_delivery_routes[city][path].append(warehouseLocationsMap[city]["warehouseId"])
+						city_delivery_routes[city][path]["orders"].append(warehouseLocationsMap[city]["warehouseId"])
 					else:
-						city_delivery_routes[city][path].append(city_orders_indexing[city][orderIndex])	
+						city_delivery_routes[city][path]["orders"].append(city_orders_indexing[city][orderIndex])	
+	
+	db_entry = {
+		'_id': deliveryDate,
+		'orderRouting': city_delivery_routes
+	}
+	routes.insert_one(db_entry)
+	print('inserted one')
 ######## END - ORDER ROUTING ########
 
+######## Testing scripts ########
+# cities = '"Phoenix", "Los Angeles", "Sacramento", "Denver", "Las Vegas", "Boston", "Seattle", "New York", "Chicago", "San Jose"'
+# routeOrders(None, None, None, { "cities": cities, "deliveryDate": "2021-12-31" })
+#################################
+
+
 ######## RabbitMQ connection ###########
-rabbitMQHost = os.getenv("RABBITMQ_HOST") or "rabbitmq"
 rabbitMQ = pika.BlockingConnection(
-	pika.ConnectionParameters(host=rabbitMQHost))
+	pika.ConnectionParameters(host=c.config['rabbitmq_host'], port=c.config['rabbitmq_port']))
 rabbitMQChannel = rabbitMQ.channel()
-rabbitMQChannel.queue_declare(queue='toSortingWorker')
-rabbitMQChannel.exchange_declare(exchange='logs', exchange_type='topic')
-rabbitMQChannel.basic_consume(queue='toSortingWorker', on_message_callback=routeOrders, auto_ack=False)
+rabbitMQChannel.queue_declare(queue='toRoutingWorker')
+rabbitMQChannel.basic_consume(queue='toRoutingWorker', on_message_callback=routeOrders, auto_ack=False)
 rabbitMQChannel.start_consuming()
 ######## END - RabbitMQ connection ###########

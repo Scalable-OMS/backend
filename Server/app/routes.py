@@ -13,7 +13,7 @@ def getOrderRoutes():
 	city = request.args.get('city')
 	deliveryDate = request.args.get('deliveryDate')
 	try:
-		routes = mongo_db().routes.find({ "_id": deliveryDate })
+		routes = mongo_db().routes.find({ "deliveryDate": deliveryDate })
 		cityOrders = filter(lambda x: x.city == city, routes)
 		return Response(response=jsonpickle.encode({ "data": cityOrders }), status=200)
 	except Exception as e:

@@ -1,4 +1,5 @@
 mysql-connector-python
 pika
-PyMongo
+pymongo
 jsonpickle
+pymongo[srv]
