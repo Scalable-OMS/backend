@@ -5,7 +5,9 @@ import os
 # from flask_sqlalchemy import SQLAlchemy
 # from config import config
 from . import db
-
+import json
+import mysql.connector
+from .config import config
 
 ######### MYSQL ###########
 # SQLAlchemy Database Configuration With Mysql
@@ -27,7 +29,7 @@ class Users(db.Model):
 	name = db.Column(db.String(100))
 	email = db.Column(db.String(100))
 	address = db.Column(db.String(400))
-	postalcode = db.Column(db.Integer)
+	postalCode = db.Column(db.Integer)
 	city = db.Column(db.String(100))
 
 	def __init__(self, id, name, address, postalcode, city, email):
@@ -45,8 +47,8 @@ class Orders(db.Model):
 	deliveryDate = db.Column(db.String(100))
 	status = db.Column(db.String(100))
 
-	# user = db.relationship("Users", foreign_keys="Orders.userId")
-	# product = db.relationship("Products", foreign_keys="Orders.productId")
+	user = db.relationship("Users", foreign_keys="Orders.userId")
+	product = db.relationship("Products", foreign_keys="Orders.productId")
 
 	def __init__(self, id, productId, userId, deliveryDate, status):
 		self.id = id
@@ -54,6 +56,28 @@ class Orders(db.Model):
 		self.userId = userId
 		self.deliveryDate = deliveryDate
 		self.status = status
+
+def serializeOrder(order):
+	res = {
+			"id": order[0].id,
+			"deliveryDate": order[0].deliveryDate,
+			"status": order[0].status,
+			"user": {
+				"id": order[1].id,
+				"name": order[1].name,
+				"email": order[1].email,
+				"address": order[1].address,
+				"postalCode": order[1].postalCode,
+				"city": order[1].city
+			}
+		}
+	if len(order) == 3:
+		res['product'] = {
+			"id": order[2].id,
+			"productName": order[2].productName
+		}
+	return res
+
 
 class Products(db.Model):
 	id = db.Column(db.String(100), primary_key = True)
@@ -91,13 +115,48 @@ def mysql_db():
 	return db
 
 ##### orders #####
-def getAllOrders(deliveryDate):
-	return db.session.query(Orders).filter_by(deliveryDate=deliveryDate).all()
+# def getAllOrders():
+# 	try:
+# 		return db.session.query(Orders).filter_by(deliveryDate=deliveryDate).all()
+# 	except Exception as e:
+# 		print(e)
 
-def getOrderDetails():
-	orderDetails = db.session.query(Orders, Users).join(Orders).join(Users).filter_by(Orders.userId == Users.id).all()
-	print(orderDetails)
+def getOrderDetails(deliveryDate, city, postalCode):
+	if city:
+		response = db.\
+			session.\
+			query(Orders, Users, Products).\
+			join(Users, Users.id==Orders.userId).\
+			join(Products, Products.id==Orders.productId).\
+			filter(Users.city==city).\
+			filter(Orders.deliveryDate==deliveryDate).\
+			all()
+	elif postalCode:
+		response = db.\
+			session.\
+			query(Orders, Users, Products).\
+			join(Users, Users.id==Orders.userId).\
+			join(Products, Products.id==Orders.productId).\
+			filter(Users.postalCode==postalCode).\
+			filter(Orders.deliveryDate==deliveryDate).\
+			all()
+
+	orderDetails = [ serializeOrder(order) for order in response ]
 	return orderDetails
+
+def getOrderCities(deliveryDate):
+	response = db.session.\
+		query(Users, Orders).\
+		join(Orders, Orders.userId == Users.id).\
+		filter(Orders.deliveryDate==deliveryDate).\
+		all()
+	citiesMap = {}
+	for order in response:
+		if order[0].city in citiesMap:
+			citiesMap[order[0].city] += 1
+		else:
+			citiesMap[order[0].city] = 1
+	return citiesMap
 
 def createOrder(order):
 	order_obj = Orders(productId=order["productId"], userId=order["userId"], deliveryDate=order["deliveryDate"])
@@ -108,6 +167,42 @@ def cancelOrder(orderId):
 	order = db.session.query(Orders).filter_by(orderId=orderId).first()
 	order.status = "cancelled"
 	db.session.commit()
+
+# response = db.session.\
+# 	query(Users, Orders).\
+# 	join(Orders, Orders.userId==Users.id).\
+# 	filter(Users.city==category['value']).\
+# 	filter(Orders.deliveryDate==deliveryDate).\
+# 	update({ Orders.status: status }, synchronize_session=False)
+def updateStatus(category, status, deliveryDate):
+	mysqldb = mysql.connector.connect(
+		host=config['host'],
+		user=config['username'],
+		password=config['password'],
+		database=config['dbname']
+	)
+	if category['key'] == 'city':
+		query = "UPDATE orders o \
+			INNER JOIN users u ON o.userId=u.id \
+			SET o.status='{status}' WHERE u.city='{city}' AND o.deliveryDate='{deliveryDate}'".\
+			format(status=status, city=category['value'], deliveryDate=deliveryDate)
+
+	elif category['key'] == 'postalCode':
+		query = "UPDATE orders o \
+			INNER JOIN users u ON o.userId=u.id \
+			SET o.status='{status}' WHERE u.postalCode='{postalCode}' AND o.deliveryDate='{deliveryDate}'".\
+			format(status=status, postalCode=category['value'], deliveryDate=deliveryDate)
+	else:
+		query = "UPDATE orders o \
+			INNER JOIN users u ON o.userId=u.id \
+			SET o.status='{status}' WHERE o.id='{orderId}' AND o.deliveryDate='{deliveryDate}'".\
+			format(status=status, orderId=category['value'], deliveryDate=deliveryDate)
+
+	sqlcursor =  mysqldb.cursor()
+	sqlcursor.execute(query)
+	mysqldb.commit()
+	sqlcursor.close()
+	mysqldb.close()
 
 ##### END - orders #####
 

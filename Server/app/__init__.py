@@ -33,7 +33,7 @@ def create_app():
 	"""Construct the core application."""
 	app = Flask(__name__, instance_relative_config=False)
 	# app.config.from_object("config.Config")
-	s_uri = "mysql://{username}:{password}@{host}/{dbname}".format(
+	s_uri = "mysql+mysqlconnector://{username}:{password}@{host}/{dbname}".format(
 		username=config['username'],
 		password=config['password'],
 		host=config['host'],
@@ -55,6 +55,7 @@ def create_app():
 		from .auth import auth_api
 		from .routes import routes_api
 		
+		# db.create_all()
 		app.register_blueprint(orders_api)
 		app.register_blueprint(auth_api)
 		app.register_blueprint(routes_api)

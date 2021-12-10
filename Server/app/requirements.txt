@@ -6,3 +6,4 @@ PyMongo
 pika
 flask
 apscheduler
+mysql-connector-python

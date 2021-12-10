@@ -1,3 +1,4 @@
+import json
 from flask import Blueprint, Response, request
 from .db import mongo_db, updateOrdersStatus, getDriversByCity
 import jsonpickle
@@ -20,7 +21,7 @@ def getOrderRoutes():
 
 @routes_api.route('/api/routes', methods=['PUT'])
 def updateOrderRoutes():
-	req_body = request.body
+	req_body = json.loads(request.data)
 	# body: { category: { "key": "city", "value": "Boston" }, status: "Delivered", deliveryDate: "2021-10-08" }
 	category, status, deliveryDate = req_body['category'], req_body['status'], req_body['deliveryDate']
 	try:

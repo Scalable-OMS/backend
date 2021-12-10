@@ -1,3 +1,4 @@
+import json
 from flask import Blueprint, Response, request
 import jsonpickle
 import jwt
@@ -78,7 +79,7 @@ def login():
 			"token": None,
 			"status": False
 		}
-		creds = request.body
+		creds = json.loads(request.data)
 		user = verifyUser(creds)
 		if user is not None:
 			token = createJWT(creds)
