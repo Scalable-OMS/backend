@@ -1,0 +1,9 @@
+pyjwt
+requests
+jsonpickle
+Flask-SQLAlchemy
+PyMongo
+pika
+flask
+apscheduler
+mysql-connector-python
