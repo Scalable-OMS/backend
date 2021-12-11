@@ -4,18 +4,31 @@ import sys
 from apscheduler.schedulers.background import BackgroundScheduler
 import pika
 from .config import config
+import pymongo
+from flask_cors import CORS
 
 db = SQLAlchemy()
 
-########## ENVIRONMENT CONFIG ############
-
-########## END - ENVIRONMENT CONFIG ############
+######### MongoDB ###########
+user = config['mongo_user']
+password = config['mongo_password']
+mongodb = config['mongodb']
+host = config['mongo_host']
+connection_url = f"mongodb+srv://{user}:{password}@{host}/gameMeta?retryWrites=true&w=majority".\
+	format(user, password, host)
+client = pymongo.MongoClient(connection_url)
+m_db = client.oms
+routes_collection = m_db['routes']
+orders_collection = m_db['orders']
+driver_assignment = m_db['driver_assignment']
+######### END - MongoDB ###########
 
 ########## RABBITMQ Connection ############
 rabbitMQ = pika.BlockingConnection(
 pika.ConnectionParameters(host=config['rabbitmq_host'], port=config['rabbitmq_port'], heartbeat=0))
 rabbitMQChannel = rabbitMQ.channel()
 rabbitMQChannel.queue_declare(queue='toSortingWorker')
+rabbitMQChannel.queue_declare(queue='toRoutingWorker')
 ########## END RABBITMQ Connection ############
 
 ########### CRON Jobs ###########
@@ -45,8 +58,8 @@ def create_app():
 	########## MongoDB connection #############
 	app.config['MONGODB_SETTINGS'] = {
 		'db': config['mongodb'],
-		'host': config['mongodb_host'],
-		'port': config['mongodb_port']
+		'user': config['mongo_user'],
+		'password': config['mongo_password'],
 	}
 	########## END - MongoDB connection #############
 
@@ -55,6 +68,8 @@ def create_app():
 		from .auth import auth_api
 		from .routes import routes_api
 		
+		# CORS(app, resources={r"/*": {"origins": "*"}}, allow_headers='content-type, role, token', expose_headers='content-type, role, token')
+		CORS(app, resources={r"/*": {"origins": "*"}}, allow_headers='*', expose_headers='*')
 		# db.create_all()
 		app.register_blueprint(orders_api)
 		app.register_blueprint(auth_api)

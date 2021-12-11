@@ -2,8 +2,9 @@ pyjwt
 requests
 jsonpickle
 Flask-SQLAlchemy
-PyMongo
+pymongo
 pika
 flask
 apscheduler
 mysql-connector-python
+flask-cors

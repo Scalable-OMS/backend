@@ -257,7 +257,7 @@ def routeOrders(ch, method, properties, body):
 		result = findShortestPathFromWH(distanceMatrix)
 		city_delivery_routes[city] = {}
 		for path in result.keys():
-			city_delivery_routes[city][path] = { "orders": [], "driverId": "" }
+			city_delivery_routes[city][path] = { "orders": [] }
 			for orderIndex in result[path]:
 				if orderIndex != -1:
 					if orderIndex == 0:

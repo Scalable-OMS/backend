@@ -5,6 +5,7 @@ import os
 # from flask_sqlalchemy import SQLAlchemy
 # from config import config
 from . import db
+from . import orders_collection, routes_collection, driver_assignment
 import json
 import mysql.connector
 from .config import config
@@ -108,6 +109,7 @@ class Drivers(db.Model):
 	id = db.Column(db.Integer, primary_key = True)
 	city = db.Column(db.String(100))
 	name = db.Column(db.String(100))
+	email = db.Column(db.String(100))
 
 ######### END - Models ###########
 
@@ -203,86 +205,67 @@ def updateStatus(category, status, deliveryDate):
 	mysqldb.commit()
 	sqlcursor.close()
 	mysqldb.close()
-
 ##### END - orders #####
 
+##### GET entities ########
 def getAllWarehouses():
 	return Warehouses.query.all()
 
 def getProductById(id):
-	return Products.query.filter_by(id=id).all()
+	return db.session.query(Products).filter(Products.id==id).all()
+
+def getDriversByCity(city):
+	drivers = db.session.query(Drivers).filter(Drivers.city==city).all()
+	return drivers
+
+def getDriverCity(email):
+	driver = db.\
+		session.\
+		query(Drivers).\
+		filter(Drivers.email==email).\
+		first()
+	return driver.city
+##### END - GET entities ########
 
 ##### auth #####
-
 def verifyUser(creds):
-	user = db.session.query(Auth).filter_by(email=creds["email"]).first()
+	# user = db.session.query(Auth).filter(Auth.email==creds["email"]).first()
+	user = db.session.query(Auth).filter(Auth.email==creds["email"]).first()
 	if user is not None:
 		return user
 	return None
 
 def updateToken(token, email):
-	user = db.session.query(Auth).filter_by(email=email).first()
-	user.token = token
+	user = db.session.query(Auth).filter(Auth.email==email).first()
+	user.token = token['access_token']
 	db.session.commit()
-
 ##### END - auth #####
-
-##### Routes #####
-
-def updateOrdersStatus(category, status, deliveryDate):
-	if category['key'] == 'city':
-		# db.session.query(Orders, Users).join(Orders).join(Users).filter_by(Orders.userId == Users.id).all()
-		query = "SELECT * FROM Orders o, Users u WHERE o.userId=u.id AND u.city='{city}' AND o.deliveryDate='{deliveryDate}'".\
-			format(city=category['value'], deliveryDate=deliveryDate)
-		result = db.\
-			engine.\
-			execute(query)
-		print(result)
-	elif category['key'] == 'postalCode':
-		query = "SELECT * FROM Orders o, Users u WHERE o.userId=u.id AND u.postalCode='{postalCode}' AND o.deliveryDate='{deliveryDate}'".\
-			format(postalCode=category['value'], deliveryDate=deliveryDate)
-		result = db.\
-			engine.\
-			execute(query)
-		print(result)
-	else:
-		query = "UPDATE TABLE Orders SET status={status} WHERE id={orderId}".format(status=status, orderI=category['value'])
-		result = db.\
-			engine.\
-			execute(query)
-		print(result)
-
-def getDriversByCity(city):
-	drivers = db.session.query(Drivers).filter_by(city=city).all()
-	return drivers
-
 
 ######### END - MYSQL ###########
 
 
-######### MongoDB ###########
+######### MONGO_DB ###########
+def getOrdersByCity(deliveryDate, city):
+	orders = orders_collection.find_one({ "_id": deliveryDate })
+	if city in orders['orderData']:
+		return orders['orderData'][city]
+	else:
+		return {}
 
-m_uri = "mongodb://{host}:{port}/{dbname}".format(
-	host=os.getenv("mongodb_host"), 
-	port=os.getenv("mongodb_port"), 
-	dbname=os.getenv("mongodb")
-)
+def getDriverPathAssignment(email, city, deliveryDate):
+	result = driver_assignment.find_one({ "_id": deliveryDate, "city": city })
+	driver_path = None
+	for key in result.keys():
+		if result[key] == email:
+			driver_path = key
+	return driver_path
 
-def mongo_db():
-	return None
-	# if 'db' not in g:
-	# 	mongodb_client = PyMongo(app, uri=m_uri)
-	# 	g.db = mongodb_client.db
-
-	# return g.db
-
-def close_db(e=None):
-    """If this request connected to the database, close the
-    connection.
-    """
-    db = g.pop("db", None)
-
-    if db is not None:
-        db.close()
-
+def getOrderRoutingForCity(deliveryDate, city, path):
+	result = routes_collection.find({ "_id": deliveryDate })
+	if path:
+		city_routes = result['orderRouting'][city][path]['orders']
+	else:
+		city_routes = result['orderRouting'][city]
+	return city_routes
+		
 ######### END - MONGO_DB ###########

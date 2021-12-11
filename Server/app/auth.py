@@ -12,11 +12,14 @@ secret = os.getenv("encoding_secret")
 algorithm = os.getenv("encoding_algo")
 
 def getTokenAttribute(token, id):
-	decoded = jwt.encode(token, secret, algorithm)
-	return decoded[id]
+	try:
+		decoded = jwt.decode(token, secret, algorithm)
+		return decoded[id]
+	except Exception as e:
+		print(e)
 
 def getExp(tokenId):
-	today = datetime.today().strptime('%Y-%m-%d')
+	today = datetime.today()
 	a_end = today + timedelta(days=2)
 	a_exp = a_end.timestamp()
 	r_end = today + timedelta(days=15)
@@ -28,12 +31,13 @@ def getExp(tokenId):
 	else:
 		return { "a_exp": a_exp, "r_exp": r_exp }
 
-def createJWT(creds):
+def createJWT(creds, role):
 	token_expiry = getExp('both')
 	a_payload = {
 		"email": creds["email"],
 		"password": creds["password"],
-		"exp": token_expiry['a_exp']
+		"exp": token_expiry['a_exp'],
+		"role": role
 	}
 	r_payload = {
 		"email": creds["email"],
@@ -72,6 +76,19 @@ def validateToken(token):
 		print(e)
 		return None
 
+def responseFormatter(data, req, token_data=None):
+	role = ""
+	if req != None:
+		token = req.headers.get("token")
+		role = getTokenAttribute(token, "role")
+	else:
+		role = getTokenAttribute(token_data["access_token"], "role")
+	res = Response(response=jsonpickle.encode(data), status=200)
+	res.headers.set("Access-Control-Allow-Headers", 'content-type, token, role')
+	res.headers.set("Access-Control-Expose-Headers", 'content-type, token, role')
+	res.headers.set("role", role)
+	return res
+
 @auth_api.route("/auth/login", methods=['POST'])
 def login():
 	try:
@@ -80,14 +97,17 @@ def login():
 			"status": False
 		}
 		creds = json.loads(request.data)
-		user = verifyUser(creds)
+		try:
+			user = verifyUser(creds)
+		except Exception as e:
+			print(e)
 		if user is not None:
-			token = createJWT(creds)
+			token = createJWT(creds, user.role)
 			res = {}
 			res["token"] = token
 			res["status"] = True
-			updateToken(token, user["email"])
-			return Response(response=jsonpickle.encode(res), status=200)
+			updateToken(token, user.email)
+			return responseFormatter(res, None, token)
 		else:
 			return Response(response=jsonpickle.encode(res), status=403)
 	except Exception as e:

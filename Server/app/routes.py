@@ -1,7 +1,8 @@
 import json
 from flask import Blueprint, Response, request
-from .db import mongo_db, updateOrdersStatus, getDriversByCity
+from .db import updateStatus, getDriversByCity
 import jsonpickle
+from . import routes_collection
 
 routes_api = Blueprint("routes_api", __name__)
 
@@ -13,7 +14,7 @@ def getOrderRoutes():
 	city = request.args.get('city')
 	deliveryDate = request.args.get('deliveryDate')
 	try:
-		routes = mongo_db().routes.find({ "deliveryDate": deliveryDate })
+		routes = routes_collection.find({ "_id": deliveryDate })
 		cityOrders = filter(lambda x: x.city == city, routes)
 		return Response(response=jsonpickle.encode({ "data": cityOrders }), status=200)
 	except Exception as e:
@@ -25,7 +26,7 @@ def updateOrderRoutes():
 	# body: { category: { "key": "city", "value": "Boston" }, status: "Delivered", deliveryDate: "2021-10-08" }
 	category, status, deliveryDate = req_body['category'], req_body['status'], req_body['deliveryDate']
 	try:
-		updateOrdersStatus(category, status, deliveryDate)
+		updateStatus(category, status, deliveryDate)
 		return Response(response=jsonpickle.encode({ "data": "ok" }, status=200))
 	except Exception as e:
 		return Response(response=jsonpickle.encode({ "error": e }, status=404))
