@@ -3,7 +3,7 @@ from flask import Blueprint, Response, request
 import jsonpickle
 import jwt
 import os
-from .db import verifyUser, updateToken
+from .db import getDriverCity, verifyUser, updateToken
 from datetime import datetime
 from datetime import timedelta
 
@@ -37,8 +37,12 @@ def createJWT(creds, role):
 		"email": creds["email"],
 		"password": creds["password"],
 		"exp": token_expiry['a_exp'],
-		"role": role
+		"role": role,
 	}
+	if role == 'driver':
+		city, id = getDriverCity(creds["email"])
+		a_payload['city'] = city
+		print(city)
 	r_payload = {
 		"email": creds["email"],
 		"exp": token_expiry["r_exp"]
@@ -76,17 +80,22 @@ def validateToken(token):
 		print(e)
 		return None
 
-def responseFormatter(data, req, token_data=None):
+def responseFormatter(data, req, token_data=None, status=200):
 	role = ""
 	if req != None:
-		token = req.headers.get("token")
-		role = getTokenAttribute(token, "role")
+		token = json.loads(req.headers.get("token"))
+		role = getTokenAttribute(token["access_token"], "role")
+		city = getTokenAttribute(token["access_token"], "city")
 	else:
 		role = getTokenAttribute(token_data["access_token"], "role")
-	res = Response(response=jsonpickle.encode(data), status=200)
+		city = getTokenAttribute(token_data["access_token"], "city")
+	print(role)
+	print(city)
+	res = Response(response=jsonpickle.encode(data), status=status)
 	res.headers.set("Access-Control-Allow-Headers", 'content-type, token, role')
 	res.headers.set("Access-Control-Expose-Headers", 'content-type, token, role')
 	res.headers.set("role", role)
+	res.headers.set("city", city)
 	return res
 
 @auth_api.route("/auth/login", methods=['POST'])
@@ -116,8 +125,8 @@ def login():
 @auth_api.route("/auth/logout", methods=['PUT'])
 def logout():
 	try:
-		token = request.headers.get("token")
-		email = getTokenAttribute(token, "email")
+		token = json.loads(request.headers.get("token"))
+		email = getTokenAttribute(token['access_token'], "email")
 		updateToken({
 			"access_token": "",
 			"refresh_token": ""

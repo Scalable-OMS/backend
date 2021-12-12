@@ -108,7 +108,7 @@ class Auth(db.Model):
 class Drivers(db.Model):
 	id = db.Column(db.Integer, primary_key = True)
 	city = db.Column(db.String(100))
-	name = db.Column(db.String(100))
+	driver_name = db.Column(db.String(100))
 	email = db.Column(db.String(100))
 
 ######### END - Models ###########
@@ -197,8 +197,8 @@ def updateStatus(category, status, deliveryDate):
 	else:
 		query = "UPDATE orders o \
 			INNER JOIN users u ON o.userId=u.id \
-			SET o.status='{status}' WHERE o.id='{orderId}' AND o.deliveryDate='{deliveryDate}'".\
-			format(status=status, orderId=category['value'], deliveryDate=deliveryDate)
+			SET o.status='{status}' WHERE o.id='{orderId}'".\
+			format(status=status, orderId=category['value'])
 
 	sqlcursor =  mysqldb.cursor()
 	sqlcursor.execute(query)
@@ -224,7 +224,7 @@ def getDriverCity(email):
 		query(Drivers).\
 		filter(Drivers.email==email).\
 		first()
-	return driver.city
+	return driver.city, driver.id
 ##### END - GET entities ########
 
 ##### auth #####
@@ -236,6 +236,7 @@ def verifyUser(creds):
 	return None
 
 def updateToken(token, email):
+	print(email)
 	user = db.session.query(Auth).filter(Auth.email==email).first()
 	user.token = token['access_token']
 	db.session.commit()
@@ -252,20 +253,53 @@ def getOrdersByCity(deliveryDate, city):
 	else:
 		return {}
 
-def getDriverPathAssignment(email, city, deliveryDate):
-	result = driver_assignment.find_one({ "_id": deliveryDate, "city": city })
+def getDriverPathAssignment(driver_id, city, deliveryDate):
+	# result = driver_assignment.find_one({ "deliveryDate": deliveryDate, "city": city })
+	result = driver_assignment.find_one({ "deliveryDate": deliveryDate, "city": "Chicago" })
 	driver_path = None
-	for key in result.keys():
-		if result[key] == email:
-			driver_path = key
+	# print(result.keys())
+	if result:
+		for key in result.keys():
+			# print(type(result[key]))
+			if result[key] == driver_id:
+				driver_path = key
 	return driver_path
 
-def getOrderRoutingForCity(deliveryDate, city, path):
-	result = routes_collection.find({ "_id": deliveryDate })
-	if path:
-		city_routes = result['orderRouting'][city][path]['orders']
-	else:
-		city_routes = result['orderRouting'][city]
-	return city_routes
-		
+def getOrderRoutingForCity(deliveryDate, city, path=None):
+	result = routes_collection.find_one({ "_id": deliveryDate })
+	driversAssigned = driver_assignment.find_one({ "deliveryDate": deliveryDate, "city": city })
+	if result:
+		if path:
+			city_routes = result['orderRouting'][city][path]['orders']
+		else:
+			city_routes = []
+			for order_path in result['orderRouting'][city].keys():
+				obj = {
+					"path_id": order_path,
+					"noOfOrders": len(result['orderRouting'][city][order_path]['orders'])
+				}
+				if driversAssigned != None:
+					obj["driverAssigned"] = driversAssigned[order_path]
+				city_routes.append(obj)
+		return city_routes
+
+def updateDriverForPath(deliveryDate, city, path, driverId):
+	filter = { "deliveryDate": deliveryDate, "city": city }
+	query = {}
+	query[path] = driverId
+	update = { "$set": query}
+	# print(update)
+	driver_assignment.update_one(filter, update)
+
+def getOrderDetailsForEachOrder(deliveryRoute):
+	orders = []
+	for order in deliveryRoute:
+		try:
+			order_details = { "orderId": order['orderId'], "deliveryAddress": order["deliveryAddress"] }
+			entry = db.session.query(Orders).filter(Orders.id==order['orderId']).first()
+			order_details["status"] = entry.status
+			orders.append(order_details)
+		except:
+			print('warehouse location')
+	return orders
 ######### END - MONGO_DB ###########

@@ -5,11 +5,11 @@ from Server.app.auth import getTokenAttribute, responseFormatter
 from .db import createOrder,\
 	cancelOrder,\
 	getDriverCity,\
-	getDriverPathAssignment,\
+	getDriverPathAssignment, getDriversByCity,\
 	getOrderDetails,\
-	getOrderCities,\
+	getOrderCities, getOrderDetailsForEachOrder,\
 	getOrderRoutingForCity,\
-	getOrdersByCity,\
+	getOrdersByCity, updateDriverForPath,\
 	updateStatus
 import json
 
@@ -50,10 +50,14 @@ def GetOrdersByCity():
 			cityOrders = getOrdersByCity(deliveryDate, city)
 			return responseFormatter(cityOrders, request)
 		else:
-			city = getDriverCity(email)
-			driverPathAssignment = getDriverPathAssignment(email, city, deliveryDate)
-			cityDeliveryRoute = getOrderRoutingForCity(deliveryDate, city, driverPathAssignment)
-			return responseFormatter(cityDeliveryRoute, request)
+			city, driver_id = getDriverCity(email)
+			if city:
+				driverPathAssignment = getDriverPathAssignment(str(driver_id), city, deliveryDate)
+				cityDeliveryRoute = getOrderRoutingForCity(deliveryDate, city, driverPathAssignment)
+				orders = getOrderDetailsForEachOrder(cityDeliveryRoute)
+				return responseFormatter(orders, request)
+			else:
+				return responseFormatter({ "status": "no path assigned" }, request)
 	except Exception as e:
 		return Response(response=jsonpickle.encode(e), status=400)
 
@@ -62,9 +66,10 @@ def GetOrderRouting():
 	try:
 		deliveryDate = request.args.get('deliveryDate')
 		city = request.args.get('city')
-		getOrderRouting(city, deliveryDate)
+		paths = getOrderRoutingForCity(deliveryDate, city)
+		return responseFormatter(paths, request)
 	except Exception as e:
-		return Response(response=jsonpickle.encode(e), status=400) 
+		return responseFormatter(e, request, 400)
 
 @orders_api.route("/orders", methods=['POST'])
 def CreateOrders():
@@ -94,5 +99,24 @@ def UpdateOrderStatus():
 	try:
 		updateStatus(category, status, deliveryDate)
 		return Response(response="Updated", status=200)
+	except Exception as e:
+		return Response(response=jsonpickle.encode(e), status=400)
+
+@orders_api.route("/drivers", methods=['GET'])
+def getDrivers():
+	city = request.args.get('city')
+	try:
+		drivers = getDriversByCity(city)
+		return responseFormatter(drivers, request)
+	except Exception as e:
+		return Response(response=jsonpickle.encode(e), status=400)
+
+@orders_api.route("/drivers", methods=['PUT'])
+def updateDriver():
+	body = json.loads(request.data)
+	deliveryDate, driverId, city, path = body['deliveryDate'], body['driverId'], body['city'], body['path']
+	try:
+		updateDriverForPath(deliveryDate, city, path, driverId)
+		return responseFormatter({ "status": "ok" }, request)
 	except Exception as e:
 		return Response(response=jsonpickle.encode(e), status=400)

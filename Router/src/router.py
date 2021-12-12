@@ -26,6 +26,7 @@ connection_url = f"mongodb+srv://{user}:{password}@{host}/gameMeta?retryWrites=t
 client = pymongo.MongoClient(connection_url)
 db = client.oms
 routes = db['routes']
+driver_assignment = db['driver_assignment']
 ######### END - MongoDB ###########
 
 ######### MYSQL ###########
@@ -249,27 +250,31 @@ def routeOrders(ch, method, properties, body):
 			"orderAddress": order[10],
 			"customerId": order[2]
 		})
-	print(cityOrdersMap.keys())
 	cityDistanceMatrixMap, city_orders_indexing = getDistanceBetweenOrders(cityOrdersMap, warehouseLocationsMap)
 	city_delivery_routes = {}
+	all_city_paths = []
 	for city in cityDistanceMatrixMap.keys():
 		distanceMatrix = cityDistanceMatrixMap[city]
 		result = findShortestPathFromWH(distanceMatrix)
 		city_delivery_routes[city] = {}
+		city_path = { "city": city, "deliveryDate": deliveryDate }
 		for path in result.keys():
+			city_path[path]= ""
 			city_delivery_routes[city][path] = { "orders": [] }
 			for orderIndex in result[path]:
 				if orderIndex != -1:
 					if orderIndex == 0:
 						city_delivery_routes[city][path]["orders"].append(warehouseLocationsMap[city]["warehouseId"])
 					else:
-						city_delivery_routes[city][path]["orders"].append(city_orders_indexing[city][orderIndex])	
+						city_delivery_routes[city][path]["orders"].append(city_orders_indexing[city][orderIndex])
+			all_city_paths.append(city_path)
 	
 	db_entry = {
 		'_id': deliveryDate,
 		'orderRouting': city_delivery_routes
 	}
 	routes.insert_one(db_entry)
+	driver_assignment.insert_many(all_city_paths)
 	print('inserted one')
 ######## END - ORDER ROUTING ########
 
