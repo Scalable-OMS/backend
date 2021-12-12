@@ -1,7 +1,7 @@
 from flask import Blueprint, Response, request
 import jsonpickle
 
-from Server.app.auth import getTokenAttribute, responseFormatter
+from .auth import getTokenAttribute, responseFormatter
 from .db import createOrder,\
 	cancelOrder,\
 	getDriverCity,\

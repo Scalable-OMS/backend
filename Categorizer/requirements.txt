@@ -1,6 +1,9 @@
-requests
 jsonpickle
+
 pymongo
-pika
-mysql-connector-python
 pymongo[srv]
+mysql-connector-python
+
+pika
+
+python-dotenv

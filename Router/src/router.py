@@ -7,7 +7,6 @@
 # create a distance matrix and use a naive travelling salesman problem and get the route
 # store the route in mongoDB document for that date
 from math import *
-from Router.src import config
 import pika
 import pymongo
 import mysql.connector

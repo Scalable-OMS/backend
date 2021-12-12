@@ -6,6 +6,8 @@ import pika
 from .config import config
 import pymongo
 from flask_cors import CORS
+import jsonpickle
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -35,10 +37,14 @@ rabbitMQChannel.queue_declare(queue='toRoutingWorker')
 def job():
 	print("job called", file=sys.stderr)
 	# schedule a job to the categorizer worker
-	rabbitMQ.publish_action()
+	body = jsonpickle.encode({
+		"deliveryDate": datetime.today().strftime('%Y-%m-%d')
+	})
+	rabbitMQ.publish_action(exchange='', routing_key='toRoutingWorker', body=body)
+	rabbitMQ.publish_action(exchange='', routing_key='toSortingWorker', body=body)
 
 scheduler = BackgroundScheduler({'apscheduler.timezone': 'UTC'})
-a_job = scheduler.add_job(job, trigger='cron', hour='18', minute='23', second='0')
+a_job = scheduler.add_job(job, trigger='cron', hour='17', minute='00', second='0')
 scheduler.start()
 ########### CRON Jobs ############
 

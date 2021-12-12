@@ -1,28 +1,7 @@
-from flask import g
-import os
-# from pymongo import MongoClient
-# from flask import current_app as app
-# from flask_sqlalchemy import SQLAlchemy
-# from config import config
 from . import db
 from . import orders_collection, routes_collection, driver_assignment
-import json
 import mysql.connector
 from .config import config
-
-######### MYSQL ###########
-# SQLAlchemy Database Configuration With Mysql
-# db = None
-# def init_db():
-# 	s_uri = "mysql://{username}:{password}@{host}/{dbname}".format(
-# 		username=config['username'],
-# 		password=config['password'],
-# 		host=config['host'],
-# 		dbname=config['dbname']
-# 	)
-# 	app.config['SQLALCHEMY_DATABASE_URI'] = s_uri
-# 	app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# 	db = SQLAlchemy(app)
 
 ######### Models ###########
 class Users(db.Model):

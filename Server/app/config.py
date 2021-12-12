@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import sys
 
 load_dotenv()
 
@@ -16,3 +17,5 @@ config['mongo_host'] = os.getenv("mongo_host")
 
 config['rabbitmq_host'] = os.getenv("rabbitmq_host")
 config['rabbitmq_port'] = os.getenv("rabbitmq_port")
+
+# print(config, file=sys.stderr)

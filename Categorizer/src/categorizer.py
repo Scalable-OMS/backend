@@ -4,10 +4,8 @@
 # now for each of those zipcodes get only orderids and 
 # create a document with key as deliveryDate in mongodb storing the orderids under each city and zipcode
 import pika
-import os
 import pymongo
 import mysql.connector
-import json
 import config as c
 
 

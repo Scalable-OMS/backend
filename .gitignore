@@ -6,3 +6,4 @@
 *.pyc
 .idea
 __pycache__/
+oms-secrets.yaml
